@@ -410,7 +410,7 @@ def index():
         'thumbnail':get_icon_path('settings'),
         'context_menu': context_items,
     })
-
+    '''
     items.append(
     {
         'label': "Open Settings",
@@ -418,7 +418,7 @@ def index():
         'thumbnail':get_icon_path('settings'),
         'context_menu': context_items,
     })
-
+    '''
     return items
 
 
