@@ -189,7 +189,7 @@ def service_thread():
                 if not url.startswith('http'):
                     player = xbmc.Player()
                     player.play(url)
-                    count = 30
+                    count = 60
                     url = ""
                     while count:
                         count = count - 1
@@ -197,7 +197,9 @@ def service_thread():
                         if player.isPlaying():
                             url = player.getPlayingFile()
                             break
+                    time.sleep(1)
                     player.stop()
+                    time.sleep(1)
                 if not url:
                     continue
                 log(("record",url))
