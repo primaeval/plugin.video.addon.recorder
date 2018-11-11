@@ -365,7 +365,7 @@ def clear_recordings():
     recordings_labels = [(k,v) for k,v in sorted(recordings.iteritems(),key=lambda x: x[1])]
     labels = [x[1] for x in recordings_labels]
 
-    indexes = xbmcgui.Dialog().multiselect("Remove recordings",labels)
+    indexes = xbmcgui.Dialog().multiselect("Clear recordings",labels)
     if indexes:
         for index in indexes:
             url = recordings_labels[index][0]
