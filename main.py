@@ -181,10 +181,10 @@ def service_thread():
             url = f['file']
             thumbnail = f['thumbnail']
             if f['filetype'] == 'file':
-                log(("found",label))
+                #log(("found",label))
                 if not re.search(regex,label):
                     continue
-                log(("record",url))
+                #log(("record",url))
                 #continue
                 if not url.startswith('http'):
                     player = xbmc.Player()
@@ -202,7 +202,7 @@ def service_thread():
                     time.sleep(1)
                 if not url:
                     continue
-                log(("record",url))
+                #log(("record",url))
                 if url in recordings:
                     log(("already recorded",label,url))
                     #continue
@@ -240,7 +240,7 @@ def service_thread():
 
                 recordings[url] = original_label
                 recordings.sync()
-
+                xbmcgui.Dialog().notification("Addon Recorder",original_label,sound=False)
                 p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=windows())
                 video = xbmcvfs.File(recording_path,'wb')
                 while True:
@@ -252,8 +252,65 @@ def service_thread():
                 #stdout.close()
                 p.wait()
                 log(("done",cmd))
-    log("finished")
+    #log("finished")
     xbmcgui.Dialog().notification("Addon Recorder","finished",sound=False)
+    
+    
+@plugin.route('/links')
+def links():
+    return find_links()
+    
+@plugin.cached(TTL=plugin.get_setting('ttl',int))
+def find_links():
+    recordings = plugin.get_storage('recordings')
+
+    items = []
+
+    regexes = plugin.get_storage('regexes')
+    renamers = plugin.get_storage('renamers')
+    items = []
+    for (regex,path),path_label in regexes.iteritems():
+        #log((regex,path))
+        media = "video"
+        try:
+            response = RPC.files.get_directory(media=media, directory=path, properties=["thumbnail"])
+            #log(response)
+        except:
+            return
+        files = response["files"]
+        dir_items = []
+        file_items = []
+        for f in files:
+            original_label = f['label']
+            
+            if original_label in recordings.values():
+                recorded = True
+            else:
+                recorded = False
+
+            label = remove_formatting(original_label)
+            url = f['file']
+            thumbnail = f['thumbnail']
+            if f['filetype'] == 'file':
+                #log(("found",label))
+                if not re.search(regex,label):
+                    continue
+                if (regex,path) in renamers:
+                    from_regex,to_regex = json.loads(renamers[(regex,path)])
+                    label = re.sub(from_regex,to_regex,label)
+                label = "[{}] {}".format(path_label,label)
+                if recorded:
+                    label = "[COLOR yellow]%s[/COLOR]" % label
+                items.append({
+                    'label': label,
+                    'path': url,
+                    'thumbnail': f['thumbnail'],
+                    #'context_menu': context_items,
+                    'is_playable': True,
+                    'info_type': 'Video',
+                    'info':{"mediatype": "episode", "title": label}
+                })
+    return items
 
 
 def windows():
@@ -404,7 +461,13 @@ def index():
         'thumbnail':get_icon_path('recordings'),
         'context_menu': context_items,
     })
-
+    items.append(
+    {
+        'label': "Found Links",
+        'path': plugin.url_for('links'),
+        'thumbnail':get_icon_path('search'),
+        'context_menu': context_items,
+    })
     items.append(
     {
         'label': "Record",

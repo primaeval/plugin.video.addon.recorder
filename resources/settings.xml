@@ -2,6 +2,8 @@
 
 <category label="General">
     <setting type="sep"/>
+    <setting id="ttl" label="Found Links cache timeout (minutes)" type="number" default="1" />
+    <setting type="sep"/>
     <setting id="ffmpeg" label="ffmpeg exe" type="file" default=""/>
     <setting id="ffmpeg.last" label="ffmpeg exe" type="file" default="" visible="false"/>    
     <setting label="Download Folder" type="folder" id="download" source="auto" option="writeable" default="special://temp/" />
