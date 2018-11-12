@@ -4,7 +4,7 @@ import requests
 import xbmc,xbmcaddon,xbmcvfs,xbmcgui
 import xbmcplugin
 import base64
-import os,os.path
+import os,os.path,stat
 import urllib,urllib2,urlparse
 import time,datetime
 #datetime.datetime.strptime("2016", "%Y")
