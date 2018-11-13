@@ -73,8 +73,12 @@ def get_settings():
 
 @plugin.route('/add_rule/<path>/<label>/<name>')
 def add_rule(path,label,name):
+    if name == "EVERYTHING":
+        regex = ".*"
+    else:
+        regex = re.escape(name)
     dialog = xbmcgui.Dialog()
-    regex = dialog.input('Regex (%s)' % name, re.escape(name))
+    regex = dialog.input('Regex (%s)' % name, regex)
     if regex:
         regexes = plugin.get_storage('regexes')
         regexes[(regex,path)] = label
@@ -191,7 +195,7 @@ def service_thread():
                     from_regex,to_regex = json.loads(renamers[(regex,path)])
                     record_label = re.sub(from_regex,to_regex,original_label)
                 else:
-                    record_label = "[%s] - %s" % (label,original_label)
+                    record_label = "[%s] %s" % (label,original_label)
 
                 record_thread(url,record_label)
 
@@ -295,7 +299,7 @@ def record_thread(url,label):
 def links():
     return find_links()
 
-@plugin.cached(TTL=plugin.get_setting('ttl',int))
+#@plugin.cached(TTL=plugin.get_setting('ttl',int))
 def find_links():
     recordings = plugin.get_storage('recordings')
 
@@ -334,13 +338,17 @@ def find_links():
                     from_regex,to_regex = json.loads(renamers[(regex,path)])
                     label = re.sub(from_regex,to_regex,label)
                 label = "[{}] {}".format(path_label,label)
+                #log(("add",label))
+                context_items = []
+                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Record', 'XBMC.RunPlugin(%s)' % (plugin.url_for(record, url=url, label=label.encode("utf8")))))
                 if recorded:
                     label = "[COLOR yellow]%s[/COLOR]" % label
+
                 items.append({
                     'label': label,
                     'path': url,
                     'thumbnail': f['thumbnail'],
-                    #'context_menu': context_items,
+                    'context_menu': context_items,
                     'is_playable': True,
                     'info_type': 'Video',
                     'info':{"mediatype": "episode", "title": label}
@@ -426,6 +434,7 @@ def folder(path,label):
             else:
                 window = "10001"
 
+            context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Rule', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_rule, path=url, label=label.encode("utf8"), name="EVERYTHING"))))
             dir_items.append({
                 'label': "[B]%s[/B]" % file_label,
                 'path': plugin.url_for('folder', path=url, label=file_label.encode("utf8")),
@@ -433,7 +442,7 @@ def folder(path,label):
                 'context_menu': context_items,
             })
         else:
-            record_label = "[%s] - %s" % (label,file_label)
+            record_label = "[%s] %s" % (label,file_label)
             context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Rule', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_rule, path=path, label=label.encode("utf8"), name=file_label.encode("utf8")))))
             context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Record', 'XBMC.RunPlugin(%s)' % (plugin.url_for(record, url=url, label=record_label.encode("utf8")))))
             file_items.append({
