@@ -434,7 +434,7 @@ def folder(path,label):
             else:
                 window = "10001"
 
-            context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Rule', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_rule, path=url, label=label.encode("utf8"), name="EVERYTHING"))))
+            context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Rule', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_rule, path=url, label=file_label.encode("utf8"), name="EVERYTHING"))))
             dir_items.append({
                 'label': "[B]%s[/B]" % file_label,
                 'path': plugin.url_for('folder', path=url, label=file_label.encode("utf8")),
