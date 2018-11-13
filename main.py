@@ -478,6 +478,39 @@ def clear_recordings():
             del recordings[url]
 
 
+@plugin.route('/browse/<table>')
+def browse(table):
+    conn = sqlite3.connect(xbmc.translatePath('special://profile/addon_data/%s/replay.db' % addon_id()), detect_types=sqlite3.PARSE_DECLTYPES)
+    c = conn.cursor()
+    c.execute('CREATE TABLE IF NOT EXISTS %s (title TEXT, file TEXT, date TIMESTAMP, PRIMARY KEY(date))' % table)
+    items = []
+    for row in c.execute('SELECT DISTINCT title,file FROM %s ORDER BY date DESC' % table):
+        (title,file)   = row
+        #log((title,year,file,link))
+        if not title or (title == ".."):
+            continue
+        context_items = []
+        context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Record', 'XBMC.RunPlugin(%s)' % (plugin.url_for(record, label=title.encode("utf8"), url=file))))
+        title = re.sub('\[.*?\]','',title)
+        if plugin.get_setting('url') == 'true':
+            label = "%s [COLOR dimgray][%s][/COLOR]" % (title,file)
+        else:
+            label = title
+        items.append(
+        {
+            'label': label,
+            'path': file,#plugin.url_for('select', title=title,year=year),
+            'thumbnail':get_icon_path('files'),
+            'is_playable': True,
+            'info_type': 'Video',
+            'info':{"mediatype": "movie", "title": label},
+            'context_menu': context_items,
+        })
+    conn.commit()
+    conn.close()
+    return items
+
+
 @plugin.route('/')
 def index():
     items = []
@@ -512,6 +545,13 @@ def index():
     {
         'label': "Found Links",
         'path': plugin.url_for('links'),
+        'thumbnail':get_icon_path('search'),
+        'context_menu': context_items,
+    })
+    items.append(
+    {
+        'label': "Last Played",
+        'path': plugin.url_for('browse',table='links'),
         'thumbnail':get_icon_path('search'),
         'context_menu': context_items,
     })
