@@ -177,89 +177,124 @@ def service_thread():
                 log(("already recorded",original_label))
                 continue
 
-            label = remove_formatting(original_label)
+            search_label = remove_formatting(original_label)
             url = f['file']
             thumbnail = f['thumbnail']
             if f['filetype'] == 'file':
                 #log(("found",label))
-                if not re.search(regex,label):
+                if not re.search(regex,search_label):
                     continue
-                #log(("record",url))
+                log(("record",url))
                 #continue
-                if not url.startswith('http'):
-                    player = xbmc.Player()
-                    player.play(url)
-                    count = 60
-                    url = ""
-                    while count:
-                        count = count - 1
-                        time.sleep(1)
-                        if player.isPlaying():
-                            url = player.getPlayingFile()
-                            break
-                    time.sleep(1)
-                    player.stop()
-                    time.sleep(1)
-                if not url:
-                    continue
-                #log(("record",url))
-                if url in recordings:
-                    log(("already recorded",label,url))
-                    #continue
-
-                url_headers = url.split('|', 1)
-                url = url_headers[0]
-                headers = {}
-                if len(url_headers) == 2:
-                    sheaders = url_headers[1]
-                    aheaders = sheaders.split('&')
-                    if aheaders:
-                        for h in aheaders:
-                            k, v = h.split('=', 1)
-                            headers[k] = urllib.unquote_plus(v)
-
-                cmd = [ffmpeg]
-                for h in headers:
-                    cmd.append("-headers")
-                    cmd.append("%s:%s" % (h, headers[h]))
-                cmd.append("-i")
-                cmd.append(url)
 
                 if (regex,path) in renamers:
                     from_regex,to_regex = json.loads(renamers[(regex,path)])
-                    label = re.sub(from_regex,to_regex,label)
+                    record_label = re.sub(from_regex,to_regex,original_label)
+                else:
+                    record_label = "[%s] - %s" % (label,original_label)
 
-                filename = re.sub(r"[^\w' ]+", "", label, flags=re.UNICODE)
-                recording_path = plugin.get_setting("download") + filename + ' ' + datetime.datetime.now().strftime('%Y-%m-%d %H-%M-%S') +'.ts'
-                log(("filename",recording_path))
+                record_thread(url,record_label)
 
-                seconds = 60*60*4
-                cmd = cmd + ["-reconnect", "1", "-reconnect_at_eof", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "300", "-y", "-t", str(seconds), "-c", "copy"]
-                cmd = cmd + ['-f', 'mpegts','-']
-                log(("start",cmd))
 
-                recordings[url] = original_label
-                recordings.sync()
-                xbmcgui.Dialog().notification("Addon Recorder",original_label,sound=False)
-                p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=windows())
-                video = xbmcvfs.File(recording_path,'wb')
-                while True:
-                    data = p.stdout.read(1000000)
-                    if not data:
-                        break
-                    video.write(data)
-                video.close()
-                #stdout.close()
-                p.wait()
-                log(("done",cmd))
     #log("finished")
     xbmcgui.Dialog().notification("Addon Recorder","finished",sound=False)
-    
-    
+
+
+@plugin.route('/record/<url>/<label>')
+def record(url,label):
+    thread = threading.Thread(target=record_thread,args=[url,label])
+    thread.daemon = True
+    thread.start()
+
+
+def record_thread(url,label):
+
+    #log(("record",url,label))
+    recordings = plugin.get_storage('recordings')
+
+    original_label = label
+    if not url.startswith('http'):
+        player = xbmc.Player()
+        #log(("play",url))
+        player.play(url)
+        #xbmc.executebuiltin('PlayMedia(%s)' % url)
+        count = 60
+        url = ""
+        while count:
+            count = count - 1
+            time.sleep(1)
+            if player.isPlaying():
+                url = player.getPlayingFile()
+                break
+        time.sleep(1)
+        player.stop()
+        time.sleep(1)
+    if not url:
+        return
+    #log(("record",url))
+    if url in recordings:
+        log(("already recorded",label,url))
+        #return
+
+    url_headers = url.split('|', 1)
+    url = url_headers[0]
+    headers = {}
+    if len(url_headers) == 2:
+        sheaders = url_headers[1]
+        aheaders = sheaders.split('&')
+        if aheaders:
+            for h in aheaders:
+                k, v = h.split('=', 1)
+                headers[k] = urllib.unquote_plus(v)
+
+    ffmpeg = ffmpeg_location()
+    if not ffmpeg:
+        return
+
+    cmd = [ffmpeg]
+    for h in headers:
+        cmd.append("-headers")
+        cmd.append("%s:%s" % (h, headers[h]))
+    cmd.append("-i")
+    cmd.append(url)
+
+    '''
+    if (regex,path) in renamers:
+        from_regex,to_regex = json.loads(renamers[(regex,path)])
+        label = re.sub(from_regex,to_regex,label)
+    '''
+
+    filename = re.sub(r"[^\w' \[\]-]+", "", label, flags=re.UNICODE)
+    recording_path = plugin.get_setting("download") + filename + ' ' + datetime.datetime.now().strftime('%Y-%m-%d %H-%M-%S') +'.ts'
+    log(("filename",recording_path))
+
+    seconds = 60*60*4
+    cmd = cmd + ["-reconnect", "1", "-reconnect_at_eof", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "300", "-y", "-t", str(seconds), "-c", "copy"]
+    cmd = cmd + ['-f', 'mpegts','-']
+    log(("start",cmd))
+
+    recordings[url] = original_label
+    recordings.sync()
+    xbmcgui.Dialog().notification("Addon Recorder starting",original_label,sound=False)
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=windows())
+    video = xbmcvfs.File(recording_path,'wb')
+    while True:
+        data = p.stdout.read(1000000)
+        if not data:
+            break
+        video.write(data)
+    video.close()
+    #stdout.close()
+    p.wait()
+    log(("done",cmd))
+    xbmcgui.Dialog().notification("Addon Recorder finished",original_label,sound=False)
+
+
+
 @plugin.route('/links')
 def links():
     return find_links()
-    
+
 @plugin.cached(TTL=plugin.get_setting('ttl',int))
 def find_links():
     recordings = plugin.get_storage('recordings')
@@ -282,7 +317,7 @@ def find_links():
         file_items = []
         for f in files:
             original_label = f['label']
-            
+
             if original_label in recordings.values():
                 recorded = True
             else:
@@ -398,9 +433,12 @@ def folder(path,label):
                 'context_menu': context_items,
             })
         else:
+            record_label = "[%s] - %s" % (label,file_label)
             context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Rule', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_rule, path=path, label=label.encode("utf8"), name=file_label.encode("utf8")))))
+            context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Record', 'XBMC.RunPlugin(%s)' % (plugin.url_for(record, url=url, label=record_label.encode("utf8")))))
             file_items.append({
                 'label': "%s" % file_label,
+                #'path': plugin.url_for('record', path=url, label=label.encode("utf8"), name=file_label.encode("utf8")),
                 'path': url,
                 'thumbnail': f['thumbnail'],
                 'context_menu': context_items,
