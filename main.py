@@ -409,6 +409,24 @@ def ffmpeg_location():
         xbmcgui.Dialog().notification("Addon Recorder", "ffmpeg exe not found!")
 
 
+@plugin.route('/record_folder/<path>/<label>')
+def record_folder(path,label):
+    items = folder(path,label)
+    items = [i for i in items if i.get("is_playable")]
+    labels = [i["label"] for i in items]
+    indexes = xbmcgui.Dialog().multiselect(label,labels)
+    if indexes == None:
+        return
+    if not len(indexes):
+        indexes = range(len(items))
+    if indexes:
+        for index in indexes:
+            url = items[index]["path"]
+            item_label = items[index]["label"]
+            record_label = "[%s] %s" % (label,item_label)
+            #log((record_label,url))
+            record_thread(url,record_label)
+
 
 @plugin.route('/folder/<path>/<label>')
 def folder(path,label):
@@ -439,6 +457,7 @@ def folder(path,label):
                 window = "10001"
 
             context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Rule', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_rule, path=url, label=file_label.encode("utf8"), name="EVERYTHING"))))
+            context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Record', 'XBMC.RunPlugin(%s)' % (plugin.url_for(record_folder, path=url, label=file_label.encode("utf8")))))
             dir_items.append({
                 'label': "[B]%s[/B]" % file_label,
                 'path': plugin.url_for('folder', path=url, label=file_label.encode("utf8")),
