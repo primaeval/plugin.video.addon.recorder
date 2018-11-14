@@ -308,7 +308,7 @@ def find_links():
     regexes = plugin.get_storage('regexes')
     renamers = plugin.get_storage('renamers')
     items = []
-    for (regex,path),path_label in regexes.iteritems():
+    for (regex,path),label in regexes.iteritems():
         #log((regex,path))
         media = "video"
         try:
@@ -322,30 +322,33 @@ def find_links():
         for f in files:
             original_label = f['label']
 
-            if original_label in recordings.values():
-                recorded = True
-            else:
-                recorded = False
-
-            label = remove_formatting(original_label)
+            search_label = remove_formatting(original_label)
             url = f['file']
             thumbnail = f['thumbnail']
             if f['filetype'] == 'file':
                 #log(("found",label))
-                if not re.search(regex,label):
+                if not re.search(regex,search_label):
                     continue
                 if (regex,path) in renamers:
                     from_regex,to_regex = json.loads(renamers[(regex,path)])
-                    label = re.sub(from_regex,to_regex,label)
-                label = "[{}] {}".format(path_label,label)
+                    record_label = re.sub(from_regex,to_regex,original_label)
+                else:
+                    record_label = "[%s] %s" % (label,original_label)
+
+                if record_label in recordings.values():
+                    recorded = True
+                else:
+                    recorded = False
+
+                #label = "[{}] {}".format(path_label,label)
                 #log(("add",label))
                 context_items = []
-                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Record', 'XBMC.RunPlugin(%s)' % (plugin.url_for(record, url=url, label=label.encode("utf8")))))
+                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Record', 'XBMC.RunPlugin(%s)' % (plugin.url_for(record, url=url, label=record_label.encode("utf8")))))
                 if recorded:
-                    label = "[COLOR yellow]%s[/COLOR]" % label
+                    record_label = "[COLOR yellow]%s[/COLOR]" % record_label
 
                 items.append({
-                    'label': label,
+                    'label': record_label,
                     'path': url,
                     'thumbnail': f['thumbnail'],
                     'context_menu': context_items,
@@ -511,6 +514,17 @@ def browse(table):
     return items
 
 
+@plugin.route('/clear_database')
+def clear_database():
+    conn = sqlite3.connect(xbmc.translatePath('special://profile/addon_data/%s/replay.db' % addon_id()), detect_types=sqlite3.PARSE_DECLTYPES)
+    c = conn.cursor()
+    c.execute('DROP TABLE streams')
+    c.execute('DROP TABLE links')
+    c.execute('CREATE TABLE IF NOT EXISTS streams (title TEXT, file TEXT, date TIMESTAMP, PRIMARY KEY(file))')
+    c.execute('CREATE TABLE IF NOT EXISTS links (title TEXT, file TEXT, date TIMESTAMP, PRIMARY KEY(file))')
+    conn.commit()
+    conn.close()
+
 @plugin.route('/')
 def index():
     items = []
@@ -541,6 +555,7 @@ def index():
         'thumbnail':get_icon_path('recordings'),
         'context_menu': context_items,
     })
+    context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Clear Last Played', 'XBMC.RunPlugin(%s)' % (plugin.url_for(clear_database))))
     items.append(
     {
         'label': "Found Links",
