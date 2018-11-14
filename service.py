@@ -125,9 +125,9 @@ if plugin.get_setting('service',bool):
         plugin.set_setting('last.update', str(now))
 else:
     monitor = xbmc.Monitor()
+    time.sleep(10)
     while not monitor.abortRequested():
-        time.sleep(5)
-
+        monitor.waitForAbort(1)
 
 
 del player_monitor
