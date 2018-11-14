@@ -70,6 +70,19 @@ def delete(path):
 def get_settings():
     plugin.open_settings()
 
+@plugin.route('/add_search_folder/<path>/<label>')
+def add_search_folder(path,label):
+    folders = plugin.get_storage('folders')
+    folders[path] = label
+
+
+@plugin.route('/remove_search_folder/<path>')
+def remove_search_folder(path):
+    folders = plugin.get_storage('folders')
+    if path in folders:
+        del folders[path]
+        xbmc.executebuiltin('Container.Refresh')
+
 
 @plugin.route('/add_rule/<path>/<label>/<name>')
 def add_rule(path,label,name):
@@ -360,6 +373,93 @@ def find_links():
     return items
 
 
+@plugin.route('/search_dialog')
+def search_dialog():
+    what = xbmcgui.Dialog().input("Search","")
+    if what:
+        return search(what)
+
+
+@plugin.route('/search/<what>')
+def search(what):
+    return search_folders(what)
+
+
+@plugin.cached(TTL=plugin.get_setting('ttl',int))
+def search_folders(what):
+    recordings = plugin.get_storage('recordings')
+    folders = plugin.get_storage('folders')
+
+    items = []
+    dir_items = []
+    file_items = []
+    for path,label in folders.iteritems():
+        media = "video"
+        try:
+            response = RPC.files.get_directory(media=media, directory=path, properties=["thumbnail"])
+            #log(response)
+        except:
+            return
+        files = response["files"]
+
+        for f in files:
+            original_label = f['label']
+
+            search_label = remove_formatting(original_label)
+            url = f['file']
+            thumbnail = f['thumbnail']
+
+            if not re.search(what,search_label,flags=re.I):
+                continue
+
+            if f['filetype'] == 'directory':
+
+                file_label = search_label
+                context_items = []
+                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Rule', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_rule, path=url, label=file_label.encode("utf8"), name="EVERYTHING"))))
+                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Record', 'XBMC.RunPlugin(%s)' % (plugin.url_for(record_folder, path=url, label=file_label.encode("utf8")))))
+                dir_label = "[B]%s[/B]" % file_label
+                if url in folders:
+                    dir_label = "[COLOR yellow]%s[/COLOR]" % dir_label
+                    context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Remove Search', 'XBMC.RunPlugin(%s)' % (plugin.url_for(remove_search_folder, path=url))))
+                else:
+                    context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add to Search', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_search_folder, path=url, label=file_label.encode("utf8")))))
+                dir_items.append({
+                    'label': dir_label,
+                    'path': plugin.url_for('folder', path=url, label=file_label.encode("utf8")),
+                    'thumbnail': f['thumbnail'],
+                    'context_menu': context_items,
+                })
+
+            elif f['filetype'] == 'file':
+
+                record_label = "[%s] %s" % (label,original_label)
+
+                if record_label in recordings.values():
+                    recorded = True
+                else:
+                    recorded = False
+
+                #label = "[{}] {}".format(path_label,label)
+                #log(("add",label))
+                context_items = []
+                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Record', 'XBMC.RunPlugin(%s)' % (plugin.url_for(record, url=url, label=record_label.encode("utf8")))))
+                if recorded:
+                    record_label = "[COLOR yellow]%s[/COLOR]" % record_label
+
+                file_items.append({
+                    'label': record_label,
+                    'path': url,
+                    'thumbnail': f['thumbnail'],
+                    'context_menu': context_items,
+                    'is_playable': True,
+                    'info_type': 'Video',
+                    'info':{"mediatype": "episode", "title": label}
+                })
+
+    return dir_items + file_items
+
+
 def windows():
     if os.name == 'nt':
         return True
@@ -432,6 +532,7 @@ def record_folder(path,label):
 def folder(path,label):
     label = label.decode("utf8")
     #log(path)
+    folders = plugin.get_storage('folders')
     media = "video"
     try:
         response = RPC.files.get_directory(media=media, directory=path, properties=["thumbnail"])
@@ -458,8 +559,14 @@ def folder(path,label):
 
             context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Rule', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_rule, path=url, label=file_label.encode("utf8"), name="EVERYTHING"))))
             context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Record', 'XBMC.RunPlugin(%s)' % (plugin.url_for(record_folder, path=url, label=file_label.encode("utf8")))))
+            dir_label = "[B]%s[/B]" % file_label
+            if url in folders:
+                dir_label = "[COLOR yellow]%s[/COLOR]" % dir_label
+                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Remove Search', 'XBMC.RunPlugin(%s)' % (plugin.url_for(remove_search_folder, path=url))))
+            else:
+                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add to Search', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_search_folder, path=url, label=file_label.encode("utf8")))))
             dir_items.append({
-                'label': "[B]%s[/B]" % file_label,
+                'label': dir_label,
                 'path': plugin.url_for('folder', path=url, label=file_label.encode("utf8")),
                 'thumbnail': f['thumbnail'],
                 'context_menu': context_items,
@@ -499,6 +606,19 @@ def clear_recordings():
         for index in indexes:
             url = recordings_labels[index][0]
             del recordings[url]
+
+@plugin.route('/clear_folders')
+def clear_folders():
+    folders = plugin.get_storage('folders')
+
+    folders_labels = [(k,v) for k,v in sorted(folders.iteritems(),key=lambda x: x[1])]
+    labels = [x[1] for x in folders_labels]
+
+    indexes = xbmcgui.Dialog().multiselect("Clear folders",labels)
+    if indexes:
+        for index in indexes:
+            url = folders_labels[index][0]
+            del folders[url]
 
 
 @plugin.route('/browse/<table>')
@@ -595,6 +715,14 @@ def index():
         'label': "Record",
         'path': plugin.url_for('service'),
         'thumbnail':get_icon_path('settings'),
+        'context_menu': context_items,
+    })
+    context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Clear Search Folders', 'XBMC.RunPlugin(%s)' % (plugin.url_for(clear_folders))))
+    items.append(
+    {
+        'label': "Search",
+        'path': plugin.url_for('search_dialog'),
+        'thumbnail':get_icon_path('search'),
         'context_menu': context_items,
     })
     '''
