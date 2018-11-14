@@ -177,9 +177,9 @@ def service_thread():
 
             #log(original_label)
             #log(recordings.values())
-            if original_label in recordings.values():
-                log(("already recorded",original_label))
-                continue
+            #if original_label in recordings.values():
+                #log(("already recorded",original_label))
+                #continue
 
             search_label = remove_formatting(original_label)
             url = f['file']
@@ -197,7 +197,8 @@ def service_thread():
                 else:
                     record_label = "[%s] %s" % (label,original_label)
 
-                record_thread(url,record_label)
+                if record_label not in recordings.values():
+                    record_thread(url,record_label)
 
 
     #log("finished")
@@ -299,7 +300,7 @@ def record_thread(url,label):
 def links():
     return find_links()
 
-#@plugin.cached(TTL=plugin.get_setting('ttl',int))
+@plugin.cached(TTL=plugin.get_setting('ttl',int))
 def find_links():
     recordings = plugin.get_storage('recordings')
 
