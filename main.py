@@ -375,9 +375,58 @@ def find_links():
 
 @plugin.route('/search_dialog')
 def search_dialog():
+    searches = plugin.get_storage("searches")
     what = xbmcgui.Dialog().input("Search","")
     if what:
+        searches[what] = None
         return search(what)
+
+
+@plugin.route('/choose_search_folders/<what>')
+def choose_search_folders(what):
+    searches = plugin.get_storage("searches")
+    folders = plugin.get_storage('folders')
+    folder_labels = [(k,folders[k]) for k in sorted(folders,key=lambda k:folders[k])]
+    labels = [i[1] for i in folder_labels]
+    indexes = xbmcgui.Dialog().multiselect("Search",labels)
+    if indexes != None:
+        paths = [folder_labels[i][0] for i in indexes]
+        searches[what] = json.dumps(paths)
+        #return search(what)
+    else:
+        if what in searches:
+            searches[what] = None
+
+
+@plugin.route('/remove_search/<what>')
+def remove_search(what):
+    searches = plugin.get_storage("searches")
+    if what in searches:
+        del searches[what]
+        xbmc.executebuiltin('Container.Refresh')
+
+
+@plugin.route('/search_directory')
+def search_directory():
+    searches = plugin.get_storage("searches")
+    items = []
+    items.append({
+        "label": "New Search",
+        "path": plugin.url_for('search_dialog'),
+        'thumbnail': get_icon_path('search'),
+    })
+    for search in searches:
+        context_items = []
+        context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Remove Search', 'XBMC.RunPlugin(%s)' % (plugin.url_for(remove_search, what=search.encode("utf8")))))
+        context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Choose Folders', 'XBMC.RunPlugin(%s)' % (plugin.url_for(choose_search_folders, what=search.encode("utf8")))))
+        items.append({
+            "label": search,
+            "path": plugin.url_for('search',what=search),
+            'thumbnail': get_icon_path('search'),
+            'context_menu': context_items,
+        })
+    return items
+
 
 
 @plugin.route('/search/<what>')
@@ -387,6 +436,11 @@ def search(what):
 
 @plugin.cached(TTL=plugin.get_setting('ttl',int))
 def search_folders(what):
+    search_paths = None
+    searches = plugin.get_storage("searches")
+    if what in searches:
+        if searches[what] != None:
+            search_paths = json.loads(searches[what])
     recordings = plugin.get_storage('recordings')
     folders = plugin.get_storage('folders')
 
@@ -394,6 +448,8 @@ def search_folders(what):
     dir_items = []
     file_items = []
     for path,label in folders.iteritems():
+        if search_paths and path not in search_paths:
+            continue
         media = "video"
         try:
             response = RPC.files.get_directory(media=media, directory=path, properties=["thumbnail"])
@@ -721,7 +777,7 @@ def index():
     items.append(
     {
         'label': "Search",
-        'path': plugin.url_for('search_dialog'),
+        'path': plugin.url_for('search_directory'),
         'thumbnail':get_icon_path('search'),
         'context_menu': context_items,
     })
