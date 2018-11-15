@@ -379,7 +379,9 @@ def search_dialog():
     what = xbmcgui.Dialog().input("Search","")
     if what:
         searches[what] = None
-        return search(what)
+        searches.sync()
+        xbmc.executebuiltin('Container.Refresh')
+        #return search(what)
 
 
 @plugin.route('/choose_search_folders/<what>')
@@ -413,9 +415,9 @@ def search_directory():
     items.append({
         "label": "New Search",
         "path": plugin.url_for('search_dialog'),
-        'thumbnail': get_icon_path('search'),
+        'thumbnail': get_icon_path('settings'),
     })
-    for search in searches:
+    for search in sorted(searches):
         context_items = []
         context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Remove Search', 'XBMC.RunPlugin(%s)' % (plugin.url_for(remove_search, what=search.encode("utf8")))))
         context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Choose Folders', 'XBMC.RunPlugin(%s)' % (plugin.url_for(choose_search_folders, what=search.encode("utf8")))))
