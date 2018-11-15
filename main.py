@@ -380,8 +380,8 @@ def search_dialog():
     if what:
         searches[what] = None
         searches.sync()
-        xbmc.executebuiltin('Container.Refresh')
-        #return search(what)
+        #xbmc.executebuiltin('Container.Refresh')
+        return search(what)
 
 
 @plugin.route('/choose_search_folders/<what>')
