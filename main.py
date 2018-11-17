@@ -177,11 +177,7 @@ def service_thread():
     for (regex,path),label in regexes.iteritems():
         #log((regex,path))
         media = "video"
-        try:
-            response = RPC.files.get_directory(media=media, directory=path, properties=["thumbnail"])
-            #log(response)
-        except:
-            return
+        response = get_directory(media,path)
         files = response["files"]
         dir_items = []
         file_items = []
@@ -325,11 +321,7 @@ def find_links():
     for (regex,path),label in regexes.iteritems():
         #log((regex,path))
         media = "video"
-        try:
-            response = RPC.files.get_directory(media=media, directory=path, properties=["thumbnail"])
-            #log(response)
-        except:
-            return
+        response = get_directory(media,path)
         files = response["files"]
         dir_items = []
         file_items = []
@@ -461,6 +453,18 @@ def search_folders(what):
 
     return dir_items,file_items
 
+
+@plugin.cached(TTL=plugin.get_setting('ttl',int))
+def get_directory(media,path):
+    try:
+        response = RPC.files.get_directory(media=media, directory=path, properties=["thumbnail"])
+        #log(response)
+        return response
+    except Exception as e:
+        log(e)
+        return {"files":[]}
+
+
 @plugin.cached(TTL=plugin.get_setting('ttl',int))
 def search_folder(what,path,label,depth=1):
     #log(("search_folder",what,path,label))
@@ -471,11 +475,7 @@ def search_folder(what,path,label,depth=1):
     file_items = []
 
     media = "video"
-    try:
-        response = RPC.files.get_directory(media=media, directory=path, properties=["thumbnail"])
-        #log(response)
-    except:
-        return
+    response = get_directory(media,path)
     files = response["files"]
 
     for f in files:
@@ -621,11 +621,7 @@ def folder(path,label):
     #log(path)
     folders = plugin.get_storage('folders')
     media = "video"
-    try:
-        response = RPC.files.get_directory(media=media, directory=path, properties=["thumbnail"])
-        #log(response)
-    except:
-        return
+    response = get_directory(media,path)
     files = response["files"]
     dir_items = []
     file_items = []
