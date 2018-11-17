@@ -325,57 +325,69 @@ def links():
 
 @plugin.cached(TTL=plugin.get_setting('ttl',int))
 def find_links():
-    recordings = plugin.get_storage('recordings')
-
     items = []
-
     regexes = plugin.get_storage('regexes')
-    renamers = plugin.get_storage('renamers')
-    items = []
+
     for (regex,path),label in regexes.iteritems():
-        #log((regex,path))
-        media = "video"
-        response = get_directory(media,path)
-        files = response["files"]
-        dir_items = []
-        file_items = []
-        for f in files:
-            original_label = f['label']
+        items += find_folder(regex,path,label,depth=1)
+    return items
 
-            search_label = remove_formatting(original_label)
-            url = f['file']
-            thumbnail = f['thumbnail']
-            if f['filetype'] == 'file':
-                #log(("found",label))
-                if not re.search(regex,search_label):
-                    continue
-                if (regex,path) in renamers:
-                    from_regex,to_regex = json.loads(renamers[(regex,path)])
-                    record_label = re.sub(from_regex,to_regex,original_label)
-                else:
-                    record_label = "[%s] %s" % (label,original_label)
+def find_folder(regex,path,label,depth=1):
+    #log(("find_folder",regex,path,label,depth))
+    renamers = plugin.get_storage('renamers')
+    recordings = plugin.get_storage('recordings')
+    #log((regex,path))
+    media = "video"
+    response = get_directory(media,path)
+    files = response["files"]
+    dir_items = []
+    file_items = []
+    items = []
+    for f in files:
+        original_label = f['label']
+        #log(original_label)
 
-                if record_label in recordings.values():
-                    recorded = True
-                else:
-                    recorded = False
+        search_label = remove_formatting(original_label)
+        url = f['file']
+        thumbnail = f['thumbnail']
 
-                #label = "[{}] {}".format(path_label,label)
-                #log(("add",label))
-                context_items = []
-                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Record', 'XBMC.RunPlugin(%s)' % (plugin.url_for(record, url=url, label=record_label.encode("utf8")))))
-                if recorded:
-                    record_label = "[COLOR yellow]%s[/COLOR]" % record_label
+        if f['filetype'] == 'directory':
+            file_label = search_label
 
-                items.append({
-                    'label': record_label,
-                    'path': url,
-                    'thumbnail': f['thumbnail'],
-                    'context_menu': context_items,
-                    'is_playable': True,
-                    'info_type': 'Video',
-                    'info':{"mediatype": "episode", "title": label}
-                })
+            if depth < plugin.get_setting('depth',int):
+                items += find_folder(regex,url,file_label,depth=depth+1)
+
+        elif f['filetype'] == 'file':
+            #log(("found",label))
+            if not re.search(regex,search_label,flags=re.I):
+                continue
+            if (regex,path) in renamers:
+                from_regex,to_regex = json.loads(renamers[(regex,path)])
+                record_label = re.sub(from_regex,to_regex,original_label)
+            else:
+                record_label = "[%s] %s" % (label,original_label)
+
+            if record_label in recordings.values():
+                recorded = True
+            else:
+                recorded = False
+
+            #label = "[{}] {}".format(path_label,label)
+            #log(("add",label))
+            context_items = []
+            context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Record', 'XBMC.RunPlugin(%s)' % (plugin.url_for(record, url=url, label=record_label.encode("utf8")))))
+            if recorded:
+                record_label = "[COLOR yellow]%s[/COLOR]" % record_label
+
+            items.append({
+                'label': record_label,
+                'path': url,
+                'thumbnail': f['thumbnail'],
+                'context_menu': context_items,
+                'is_playable': True,
+                'info_type': 'Video',
+                'info':{"mediatype": "episode", "title": label}
+            })
     return items
 
 
