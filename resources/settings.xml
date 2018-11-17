@@ -2,6 +2,7 @@
 
 <category label="General">
     <setting type="sep"/>
+    <setting id="depth" label="Search Depth" type="number" default="1" />
     <setting id="ttl" label="Found Links cache timeout (minutes)" type="number" default="1" />
     <setting id="url" label="Show urls in Last Played" type="bool" default="false" />
     <setting type="sep"/>
