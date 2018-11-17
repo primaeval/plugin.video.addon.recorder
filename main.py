@@ -208,7 +208,7 @@ def service_folder(regex,path,label,depth=1):
             file_label = search_label
 
             if depth < plugin.get_setting('depth',int):
-                service_folder(regex,url,label,depth=depth+1)
+                service_folder(regex,url,file_label,depth=depth+1)
 
         elif f['filetype'] == 'file':
             #log(("found",label))
