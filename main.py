@@ -164,7 +164,7 @@ def service():
 @plugin.route('/service_thread')
 def service_thread():
     xbmcgui.Dialog().notification("Addon Recorder","starting",sound=False)
-    recordings = plugin.get_storage('recordings')
+
 
     #log("service_thread")
     ffmpeg = ffmpeg_location()
@@ -172,46 +172,60 @@ def service_thread():
         return
 
     regexes = plugin.get_storage('regexes')
-    renamers = plugin.get_storage('renamers')
-    items = []
+
+    #items = []
     for (regex,path),label in regexes.iteritems():
         #log((regex,path))
-        media = "video"
-        response = get_directory(media,path)
-        files = response["files"]
-        dir_items = []
-        file_items = []
-        for f in files:
-            original_label = f['label']
-
-            #log(original_label)
-            #log(recordings.values())
-            #if original_label in recordings.values():
-                #log(("already recorded",original_label))
-                #continue
-
-            search_label = remove_formatting(original_label)
-            url = f['file']
-            thumbnail = f['thumbnail']
-            if f['filetype'] == 'file':
-                #log(("found",label))
-                if not re.search(regex,search_label):
-                    continue
-                log(("record",url))
-                #continue
-
-                if (regex,path) in renamers:
-                    from_regex,to_regex = json.loads(renamers[(regex,path)])
-                    record_label = re.sub(from_regex,to_regex,original_label)
-                else:
-                    record_label = "[%s] %s" % (label,original_label)
-
-                if record_label not in recordings.values():
-                    record_thread(url,record_label)
-
+        service_folder(regex,path,label,depth=1)
 
     #log("finished")
     xbmcgui.Dialog().notification("Addon Recorder","finished",sound=False)
+
+
+def service_folder(regex,path,label,depth=1):
+    #log(("service_folder",regex,path,label,depth))
+    renamers = plugin.get_storage('renamers')
+    recordings = plugin.get_storage('recordings')
+    media = "video"
+    response = get_directory(media,path)
+    files = response["files"]
+    #dir_items = []
+    #file_items = []
+    for f in files:
+        original_label = f['label']
+
+        #log(original_label)
+        #log(recordings.values())
+        #if original_label in recordings.values():
+            #log(("already recorded",original_label))
+            #continue
+
+        search_label = remove_formatting(original_label)
+        url = f['file']
+        thumbnail = f['thumbnail']
+
+        if f['filetype'] == 'directory':
+            file_label = search_label
+
+            if depth < plugin.get_setting('depth',int):
+                service_folder(regex,url,label,depth=depth+1)
+
+        elif f['filetype'] == 'file':
+            #log(("found",label))
+            if not re.search(regex,search_label,flags=re.I):
+                continue
+            #log(("record",url))
+            #continue
+
+            if (regex,path) in renamers:
+                from_regex,to_regex = json.loads(renamers[(regex,path)])
+                record_label = re.sub(from_regex,to_regex,original_label)
+            else:
+                record_label = "[%s] %s" % (label,original_label)
+
+            if record_label not in recordings.values():
+                #log(("record_thread",url,record_label))
+                record_thread(url,record_label)
 
 
 @plugin.route('/record/<url>/<label>')
