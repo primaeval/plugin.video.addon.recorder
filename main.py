@@ -143,7 +143,7 @@ def favourite_folders():
         context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Rule', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_rule, path=path, label=label.encode("utf8"), name="EVERYTHING"))))
         context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Record', 'XBMC.RunPlugin(%s)' % (plugin.url_for(record_folder, path=path, label=label.encode("utf8")))))
         context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Remove Favourite', 'XBMC.RunPlugin(%s)' % (plugin.url_for(remove_favourite_folder, path=path.encode("utf8")))))
-        if plugin.get_setting('url') == 'true':
+        if plugin.get_setting('url.favourites') == 'true':
             display_label = "%s [COLOR dimgray][%s][/COLOR]" % (label,path)
         else:
             display_label = label
