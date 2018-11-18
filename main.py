@@ -120,7 +120,7 @@ def rules():
             addon = re.search('plugin://(.*?)/',path+'/').group(1)
             thumbnail = xbmcaddon.Addon(addon).getAddonInfo('icon')
         else:
-            thumbnail = get_icon_path('search'),
+            thumbnail = get_icon_path('search')
         items.append({
             "label" : "[{}] {}".format(label,regex),
             #"path" : path,
@@ -151,7 +151,7 @@ def favourite_folders():
             addon = re.search('plugin://(.*?)/',path+'/').group(1)
             thumbnail = xbmcaddon.Addon(addon).getAddonInfo('icon')
         else:
-            thumbnail = get_icon_path('favourites'),
+            thumbnail = get_icon_path('favourites')
         items.append({
             "label" : display_label,
             #"path" : path,
@@ -590,11 +590,16 @@ def browse(table):
             label = "%s [COLOR dimgray][%s][/COLOR]" % (title,file)
         else:
             label = title
+        if file.startswith('plugin://'):
+            addon = re.search('plugin://(.*?)/',file+'/').group(1)
+            thumbnail = xbmcaddon.Addon(addon).getAddonInfo('icon')
+        else:
+            thumbnail = get_icon_path('movie')
         items.append(
         {
             'label': label,
             'path': file,#plugin.url_for('select', title=title,year=year),
-            'thumbnail':get_icon_path('files'),
+            'thumbnail':thumbnail,
             'is_playable': True,
             'info_type': 'Video',
             'info':{"mediatype": "movie", "title": label},
