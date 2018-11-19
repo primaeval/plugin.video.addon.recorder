@@ -486,7 +486,7 @@ def folder(path,label):
         thumbnail = f['thumbnail']
         if not thumbnail:
             thumbnail = get_icon_path('unknown')
-        context_items = []
+
         if f['filetype'] == 'directory':
             if media == "video":
                 window = "10025"
@@ -494,7 +494,7 @@ def folder(path,label):
                 window = "10502"
             else:
                 window = "10001"
-
+            context_items = []
             context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Rule', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_rule, path=url, label=file_label.encode("utf8"), name="EVERYTHING"))))
             context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Record', 'XBMC.RunPlugin(%s)' % (plugin.url_for(record_folder, path=url, label=file_label.encode("utf8")))))
             if url in favourites:
@@ -514,6 +514,7 @@ def folder(path,label):
 
 
             context_items = []
+            context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Rule', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_rule, path=path, label=label.encode("utf8"), name=file_label.encode("utf8")))))
             context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Record', 'XBMC.RunPlugin(%s)' % (plugin.url_for(record, url=url, label=record_label.encode("utf8")))))
             context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Favourite', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_favourite_folder, path=url, label=record_label.encode("utf8")))))
 
@@ -523,8 +524,6 @@ def folder(path,label):
             else:
                 display_label = "%s" % file_label
 
-            context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Rule', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_rule, path=path, label=label.encode("utf8"), name=file_label.encode("utf8")))))
-            context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Record', 'XBMC.RunPlugin(%s)' % (plugin.url_for(record, url=url, label=record_label.encode("utf8")))))
             file_items.append({
                 'label': display_label,
                 'path': url,
