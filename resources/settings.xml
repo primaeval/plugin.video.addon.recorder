@@ -10,6 +10,7 @@
     <setting id="ffmpeg" label="ffmpeg exe" type="file" default=""/>
     <setting id="ffmpeg.last" label="ffmpeg exe" type="file" default="" visible="false"/>    
     <setting label="Download Folder" type="folder" id="download" source="auto" option="writeable" default="special://temp/" />
+    <setting id="recording.hours" label="Maximum Recording Length (hours)" type="number" default="6"/>
 </category>
 
 <category label="Service">

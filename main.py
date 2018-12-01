@@ -291,7 +291,7 @@ def record_thread(url,label):
     recording_path = plugin.get_setting("download") + filename + ' ' + datetime.datetime.now().strftime('%Y-%m-%d %H-%M-%S') +'.ts'
     log(("filename",recording_path))
 
-    seconds = 60*60*4
+    seconds = 60*60*plugin.get_setting('recording.hours',int)
     cmd = cmd + ["-reconnect", "1", "-reconnect_at_eof", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "300", "-y", "-t", str(seconds), "-c", "copy"]
     cmd = cmd + ['-f', 'mpegts','-']
     log(("start",cmd))
