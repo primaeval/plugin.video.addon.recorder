@@ -85,12 +85,13 @@ def Service():
     time.sleep(2)
     servicing = False
 
-if plugin.get_setting('service',bool):
+if plugin.get_setting('service.startup',bool):
+    Service()
+    plugin.set_setting('last.update', str(time.time()))
+
+if plugin.get_setting('service',bool) and plugin.get_setting('service.type',int):
     monitor = xbmc.Monitor()
     xbmc.log("[plugin.video.addon.recorder] service started...",xbmc.LOGERROR)
-    if plugin.get_setting('service.startup',bool):
-        Service()
-        plugin.set_setting('last.update', str(time.time()))
     while not monitor.abortRequested():
         if plugin.get_setting('service.type') == '1':
             interval = int(plugin.get_setting('service.interval'))
