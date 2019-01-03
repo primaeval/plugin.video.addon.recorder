@@ -307,9 +307,19 @@ def record_thread(url,label):
             break
         video.write(data)
     video.close()
-    #stdout.close()
+
     p.wait()
     log(("done",cmd))
+    f = xbmcvfs.File(recording_path)
+    size = f.size()
+    log(("size",size))
+    f.close()
+    if size < 1000000:
+        del recordings[url]
+        recordings.sync()
+        log(("too small",url))
+
+
     xbmcgui.Dialog().notification("Addon Recorder finished",original_label,sound=False)
 
 
