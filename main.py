@@ -162,7 +162,7 @@ def favourite_folders():
             'context_menu': context_items,
         })
 
-    return sorted(items)
+    return sorted(items, key=lambda k: k.get("label").lower())
 
 
 @plugin.route('/service')
