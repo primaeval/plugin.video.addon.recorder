@@ -74,8 +74,10 @@ def get_settings():
 @plugin.route('/add_favourite_folder/<path>/<label>')
 def add_favourite_folder(path,label):
     favourites = plugin.get_storage('favourites')
-    favourites[path] = label
-    xbmc.executebuiltin('Container.Refresh')
+    label = xbmcgui.Dialog().input("Add Favourite: \"%s\"\n%s" % (label,path),label)
+    if label:
+        favourites[path] = label
+        xbmc.executebuiltin('Container.Refresh')
 
 
 @plugin.route('/remove_favourite_folder/<path>')
