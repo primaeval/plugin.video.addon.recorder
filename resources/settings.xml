@@ -3,21 +3,24 @@
 <category label="General">
     <setting type="sep"/>
     <setting id="depth" label="Search Depth" type="number" default="1" />
-    <setting id="ttl" label="Found Links cache timeout (minutes)" type="number" default="1" />
+    <setting id="ttl" label="Found Links cache timeout (minutes)" type="number" default="60" />
     <setting id="url" label="Show urls in Last Played" type="bool" default="false" />
     <setting id="url.favourites" label="Show urls in Favourites" type="bool" default="false" />
     <setting type="sep"/>
     <setting id="ffmpeg" label="ffmpeg exe" type="file" default=""/>
-    <setting id="ffmpeg.last" label="ffmpeg exe" type="file" default="" visible="false"/>    
+    <setting id="ffmpeg.last" label="ffmpeg exe" type="file" default="" visible="false"/>
     <setting label="Download Folder" type="folder" id="download" source="auto" option="writeable" default="special://temp/" />
     <setting id="recording.hours" label="Maximum Recording Length (hours)" type="number" default="6"/>
+    <setting type="sep"/>
+    <setting label="Trakt User" type="text" id="trakt.user" default=""/>
+    <setting label="Trakt api key" type="text" id="trakt.api.key" default="fbaadf97ffeee5c38732ad51443acf9298a54bcc1e8913e7d72b2ddc1158082e"/>
 </category>
 
 <category label="Service">
     <setting type="sep"/>
     <setting id="service.delay.seconds" label="Startup Delay (seconds)" type="number" default="60"/>
     <setting id="service" label="Background Service" type="bool" default="false" />
-    <setting id="service.startup" label="Update on Login" type="bool" default="true" visible="eq(-1,true)"/>
+    <setting id="service.startup" label="Update on Login" type="bool" default="false" visible="eq(-1,true)"/>
     <setting id="service.type" label="Service Schedule Type" type="enum" default="Period" visible="eq(-2,true)" values="None|Period|Time" />
     <setting id="service.interval" label="Interval (hours)" type="number" default="24"  visible="eq(-3,true)+eq(-1,1)" />
     <setting id="service.time" type="time" label="Service Time" default="03:33" visible="eq(-4,true)+eq(-2,2)"/>

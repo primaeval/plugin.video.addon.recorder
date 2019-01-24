@@ -88,6 +88,40 @@ def remove_favourite_folder(path):
         xbmc.executebuiltin('Container.Refresh')
 
 
+@plugin.route('/add_trakt_movie_folder/<path>/<label>')
+def add_trakt_movie_folder(path,label):
+    trakt_movies = plugin.get_storage('trakt_movies')
+    label = xbmcgui.Dialog().input("Add trakt_movie: \"%s\"\n%s" % (label,path),label)
+    if label:
+        trakt_movies[path] = label
+        xbmc.executebuiltin('Container.Refresh')
+
+
+@plugin.route('/remove_trakt_movie_folder/<path>')
+def remove_trakt_movie_folder(path):
+    trakt_movies = plugin.get_storage('trakt_movies')
+    if path in trakt_movies:
+        del trakt_movies[path]
+        xbmc.executebuiltin('Container.Refresh')
+
+
+@plugin.route('/add_trakt_series_folder/<path>/<label>')
+def add_trakt_series_folder(path,label):
+    trakt_seriess = plugin.get_storage('trakt_series')
+    label = xbmcgui.Dialog().input("Add trakt_series: \"%s\"\n%s" % (label,path),label)
+    if label:
+        trakt_seriess[path] = label
+        xbmc.executebuiltin('Container.Refresh')
+
+
+@plugin.route('/remove_trakt_series_folder/<path>')
+def remove_trakt_series_folder(path):
+    trakt_seriess = plugin.get_storage('trakt_series')
+    if path in trakt_seriess:
+        del trakt_seriess[path]
+        xbmc.executebuiltin('Container.Refresh')
+
+
 @plugin.route('/add_rule/<path>/<label>/<name>')
 def add_rule(path,label,name):
     if name == "EVERYTHING":
@@ -189,6 +223,8 @@ def service_thread():
         #log((regex,path))
         service_folder(regex,path,label,depth=1)
 
+    trakt_movies()
+
     #log("finished")
     xbmcgui.Dialog().notification("Addon Recorder","finished",sound=False)
 
@@ -230,6 +266,64 @@ def service_folder(regex,path,label,depth=1):
             if record_label not in recordings.values():
                 #log(("record_thread",url,record_label))
                 record_thread(url,record_label)
+
+def trakt_movies():
+    movie_folders = plugin.get_storage("trakt_movies")
+    user = plugin.get_setting('trakt.user')
+    if not user:
+        return
+    trakt_movies = trakt_movies_watchlist(user)
+    log(trakt_movies)
+    if not trakt_movies:
+        return
+    for (title,year) in trakt_movies:
+        regex = title
+        label = "%s (%s)" % (title,year)
+        for path in movie_folders:
+            service_folder(regex,path,label,depth=1)
+
+
+def trakt_movies_watchlist(user):
+    headers = {
+      'Content-Type': 'application/json',
+      'trakt-api-version': '2',
+      'trakt-api-key': ADDON.getSetting('trakt.api.key')
+    }
+    url = 'https://api.trakt.tv/users/%s/watchlist/movies'  % user
+    log(("trakt",url))
+    content = requests.get(url, headers=headers).content
+    if not content:
+        return
+    json_movies = json.loads(content)
+    movies = []
+    for movie in json_movies:
+        details = movie["movie"]
+        title = details["title"]
+        year = details["year"]
+        movies.append((title,year))
+    return movies
+
+
+def trakt_tv_unwatched(user):
+    headers = {
+      'Content-Type': 'application/json',
+      'trakt-api-version': '2',
+      'trakt-api-key': ADDON.getSetting('trakt.api.key')
+    }
+    url = 'http://api.trakt.tv/users/%s/collection/shows' % user
+    log(("trakt",url))
+    r = requests.get(url, headers=headers)
+    content = r.content
+    shows = json.loads(content)
+    episodes = []
+    for show in shows:
+        details = show["show"]
+        title = details["title"]
+        id = details["ids"]["trakt"]
+        new_episodes = trakt_shows_seasons_collection_unwatched(title,id)
+        if new_episodes:
+            episodes = episodes + new_episodes
+    return episodes
 
 
 @plugin.route('/record/<url>/<label>')
@@ -404,7 +498,7 @@ def find_folder(regex,path,label,depth=1):
 def get_directory(media,path):
     try:
         response = RPC.files.get_directory(media=media, directory=path, properties=["thumbnail"])
-        #log(response)
+        log(response)
         return response
     except Exception as e:
         log(e)
@@ -484,6 +578,8 @@ def record_folder(path,label):
 def folder(path,label):
     recordings = plugin.get_storage('recordings')
     favourites = plugin.get_storage('favourites')
+    trakt_movies = plugin.get_storage('trakt_movies')
+    trakt_series = plugin.get_storage('trakt_series')
     label = label.decode("utf8")
     #log(path)
     folders = plugin.get_storage('folders')
@@ -513,6 +609,15 @@ def folder(path,label):
                 context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Remove Favourite', 'XBMC.RunPlugin(%s)' % (plugin.url_for(remove_favourite_folder, path=url))))
             else:
                 context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Favourite', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_favourite_folder, path=url, label=file_label.encode("utf8")))))
+            if url in trakt_movies:
+                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Remove Trakt Movies', 'XBMC.RunPlugin(%s)' % (plugin.url_for(remove_trakt_movie_folder, path=url))))
+            else:
+                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Trakt Movies', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_trakt_movie_folder, path=url, label=file_label.encode("utf8")))))
+            if url in trakt_series:
+                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Remove Trakt Series', 'XBMC.RunPlugin(%s)' % (plugin.url_for(remove_trakt_series_folder, path=url))))
+            else:
+                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Trakt Series', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_trakt_series_folder, path=url, label=file_label.encode("utf8")))))
+
             dir_label = "[B]%s[/B]" % file_label
 
             dir_items.append({
