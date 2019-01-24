@@ -105,20 +105,20 @@ def remove_trakt_movie_folder(path):
         xbmc.executebuiltin('Container.Refresh')
 
 
-@plugin.route('/add_trakt_series_folder/<path>/<label>')
-def add_trakt_series_folder(path,label):
-    trakt_seriess = plugin.get_storage('trakt_series')
-    label = xbmcgui.Dialog().input("Add trakt_series: \"%s\"\n%s" % (label,path),label)
+@plugin.route('/add_trakt_shows_folder/<path>/<label>')
+def add_trakt_shows_folder(path,label):
+    trakt_shows = plugin.get_storage('trakt_shows')
+    label = xbmcgui.Dialog().input("Add trakt_shows: \"%s\"\n%s" % (label,path),label)
     if label:
-        trakt_seriess[path] = label
+        trakt_shows[path] = label
         xbmc.executebuiltin('Container.Refresh')
 
 
-@plugin.route('/remove_trakt_series_folder/<path>')
-def remove_trakt_series_folder(path):
-    trakt_seriess = plugin.get_storage('trakt_series')
-    if path in trakt_seriess:
-        del trakt_seriess[path]
+@plugin.route('/remove_trakt_shows_folder/<path>')
+def remove_trakt_shows_folder(path):
+    trakt_shows = plugin.get_storage('trakt_shows')
+    if path in trakt_shows:
+        del trakt_shows[path]
         xbmc.executebuiltin('Container.Refresh')
 
 
@@ -223,7 +223,8 @@ def service_thread():
         #log((regex,path))
         service_folder(regex,path,label,depth=1)
 
-    trakt_movies()
+    trakt_movies_service()
+    trakt_shows_service()
 
     #log("finished")
     xbmcgui.Dialog().notification("Addon Recorder","finished",sound=False)
@@ -267,19 +268,36 @@ def service_folder(regex,path,label,depth=1):
                 #log(("record_thread",url,record_label))
                 record_thread(url,record_label)
 
-def trakt_movies():
-    movie_folders = plugin.get_storage("trakt_movies")
+
+def trakt_movies_service():
     user = plugin.get_setting('trakt.user')
     if not user:
         return
+    movie_folders = plugin.get_storage("trakt_movies")
     trakt_movies = trakt_movies_watchlist(user)
-    log(trakt_movies)
+    #log(trakt_movies)
     if not trakt_movies:
         return
     for (title,year) in trakt_movies:
         regex = title
         label = "%s (%s)" % (title,year)
         for path in movie_folders:
+            service_folder(regex,path,label,depth=1)
+
+
+def trakt_shows_service():
+    user = plugin.get_setting('trakt.user')
+    if not user:
+        return
+    trakt_shows_folders = plugin.get_storage("trakt_shows")
+    trakt_shows = trakt_shows_collection(user)
+    #log(trakt_shows)
+    if not trakt_shows:
+        return
+    for title in trakt_shows:
+        regex = title
+        label = title
+        for path in trakt_shows_folders:
             service_folder(regex,path,label,depth=1)
 
 
@@ -304,7 +322,7 @@ def trakt_movies_watchlist(user):
     return movies
 
 
-def trakt_tv_unwatched(user):
+def trakt_shows_collection(user):
     headers = {
       'Content-Type': 'application/json',
       'trakt-api-version': '2',
@@ -314,16 +332,13 @@ def trakt_tv_unwatched(user):
     log(("trakt",url))
     r = requests.get(url, headers=headers)
     content = r.content
-    shows = json.loads(content)
-    episodes = []
-    for show in shows:
+    json_shows = json.loads(content)
+    shows = []
+    for show in json_shows:
         details = show["show"]
         title = details["title"]
-        id = details["ids"]["trakt"]
-        new_episodes = trakt_shows_seasons_collection_unwatched(title,id)
-        if new_episodes:
-            episodes = episodes + new_episodes
-    return episodes
+        shows.append(title)
+    return shows
 
 
 @plugin.route('/record/<url>/<label>')
@@ -579,7 +594,7 @@ def folder(path,label):
     recordings = plugin.get_storage('recordings')
     favourites = plugin.get_storage('favourites')
     trakt_movies = plugin.get_storage('trakt_movies')
-    trakt_series = plugin.get_storage('trakt_series')
+    trakt_shows = plugin.get_storage('trakt_shows')
     label = label.decode("utf8")
     #log(path)
     folders = plugin.get_storage('folders')
@@ -610,13 +625,13 @@ def folder(path,label):
             else:
                 context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Favourite', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_favourite_folder, path=url, label=file_label.encode("utf8")))))
             if url in trakt_movies:
-                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Remove Trakt Movies', 'XBMC.RunPlugin(%s)' % (plugin.url_for(remove_trakt_movie_folder, path=url))))
+                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Remove Trakt Movies Folder', 'XBMC.RunPlugin(%s)' % (plugin.url_for(remove_trakt_movie_folder, path=url))))
             else:
-                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Trakt Movies', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_trakt_movie_folder, path=url, label=file_label.encode("utf8")))))
-            if url in trakt_series:
-                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Remove Trakt Series', 'XBMC.RunPlugin(%s)' % (plugin.url_for(remove_trakt_series_folder, path=url))))
+                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Trakt Movies Folder', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_trakt_movie_folder, path=url, label=file_label.encode("utf8")))))
+            if url in trakt_shows:
+                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Remove Trakt Show Folder', 'XBMC.RunPlugin(%s)' % (plugin.url_for(remove_trakt_shows_folder, path=url))))
             else:
-                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Trakt Series', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_trakt_series_folder, path=url, label=file_label.encode("utf8")))))
+                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Trakt Show Folder', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_trakt_shows_folder, path=url, label=file_label.encode("utf8")))))
 
             dir_label = "[B]%s[/B]" % file_label
 
@@ -688,6 +703,34 @@ def clear_folders():
             del folders[url]
 
 
+@plugin.route('/clear_trakt_shows')
+def clear_trakt_shows():
+    trakt_shows = plugin.get_storage('trakt_shows')
+
+    trakt_shows_labels = [(k,v) for k,v in sorted(trakt_shows.iteritems(),key=lambda x: x[1])]
+    labels = [x[1] for x in trakt_shows_labels]
+
+    indexes = xbmcgui.Dialog().multiselect("Clear trakt series folders",labels)
+    if indexes:
+        for index in indexes:
+            url = trakt_shows_labels[index][0]
+            del trakt_shows[url]
+
+
+@plugin.route('/clear_trakt_movies')
+def clear_trakt_movies():
+    trakt_movies = plugin.get_storage('trakt_movies')
+
+    trakt_movies_labels = [(k,v) for k,v in sorted(trakt_movies.iteritems(),key=lambda x: x[1])]
+    labels = [x[1] for x in trakt_movies_labels]
+
+    indexes = xbmcgui.Dialog().multiselect("Clear trakt movies folders",labels)
+    if indexes:
+        for index in indexes:
+            url = trakt_movies_labels[index][0]
+            del trakt_movies[url]
+
+
 @plugin.route('/browse/<table>')
 def browse(table):
     conn = sqlite3.connect(xbmc.translatePath('special://profile/addon_data/%s/replay.db' % addon_id()), detect_types=sqlite3.PARSE_DECLTYPES)
@@ -742,6 +785,8 @@ def clear_database():
 def index():
     items = []
     context_items = []
+    context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Clear Trakt Movies Folders', 'XBMC.RunPlugin(%s)' % (plugin.url_for(clear_trakt_movies))))
+    context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Clear Trakt Shows Folders', 'XBMC.RunPlugin(%s)' % (plugin.url_for(clear_trakt_shows))))
 
     items.append(
     {
