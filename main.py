@@ -629,9 +629,9 @@ def folder(path,label):
             else:
                 context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Trakt Movies Folder', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_trakt_movie_folder, path=url, label=file_label.encode("utf8")))))
             if url in trakt_shows:
-                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Remove Trakt Show Folder', 'XBMC.RunPlugin(%s)' % (plugin.url_for(remove_trakt_shows_folder, path=url))))
+                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Remove Trakt Shows Folder', 'XBMC.RunPlugin(%s)' % (plugin.url_for(remove_trakt_shows_folder, path=url))))
             else:
-                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Trakt Show Folder', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_trakt_shows_folder, path=url, label=file_label.encode("utf8")))))
+                context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Add Trakt Shows Folder', 'XBMC.RunPlugin(%s)' % (plugin.url_for(add_trakt_shows_folder, path=url, label=file_label.encode("utf8")))))
 
             dir_label = "[B]%s[/B]" % file_label
 
