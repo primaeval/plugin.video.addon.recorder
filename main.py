@@ -341,6 +341,35 @@ def trakt_shows_collection(user):
     return shows
 
 
+def get_recordings():
+    filename = 'special://profile/addon_data/plugin.video.addon.recorder/recording.json'
+    f = xbmcvfs.File(filename,'rb')
+    try:
+        recordings = json.load(f)
+    except:
+        recordings = dict()
+    return recordings
+
+def set_recordings(recordings):
+    filename = 'special://profile/addon_data/plugin.video.addon.recorder/recording.json'
+    f = xbmcvfs.File(filename,'wb')
+    json.dump(recordings,f,indent=2)
+
+def add_recording(name,url):
+    recordings = get_recordings()
+    recordings[url] = name
+    set_recordings(recordings)
+
+def remove_recording(url):
+    recordings = get_recordings()
+    del recordings[url]
+    set_recordings(recordings)
+
+def is_recording(url):
+    recordings = get_recordings()
+    return url in recordings
+
+
 @plugin.route('/record/<url>/<label>')
 def record(url,label):
     thread = threading.Thread(target=record_thread,args=[url,label])
@@ -409,23 +438,28 @@ def record_thread(url,label):
 
     recordings[url] = original_label
     recordings.sync()
+    add_recording(original_label,url)
     xbmcgui.Dialog().notification("Addon Recorder starting",original_label,sound=False)
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=windows())
     video = xbmcvfs.File(recording_path,'wb')
+    cancelled = False
     while True:
+        if not is_recording(url):
+            cancelled = True
+            break
         data = p.stdout.read(1000000)
         if not data:
             break
         video.write(data)
     video.close()
-
+    remove_recording(url)
     p.wait()
     log(("done",cmd))
     f = xbmcvfs.File(recording_path)
     size = f.size()
     log(("size",size))
     f.close()
-    if size < 1000000:
+    if (size < 1000000) or cancelled:
         del recordings[url]
         recordings.sync()
         log(("too small",url))
@@ -669,6 +703,20 @@ def folder(path,label):
     return dir_items + file_items
 
 
+@plugin.route('/cancel_recordings')
+def cancel_recordings():
+    recordings = get_recordings()
+
+    recordings_labels = [(k,v) for k,v in sorted(recordings.iteritems(),key=lambda x: x[1])]
+    labels = [x[1] for x in recordings_labels]
+
+    indexes = xbmcgui.Dialog().multiselect("Cancel recordings",labels)
+    if indexes:
+        for index in indexes:
+            url = recordings_labels[index][0]
+            remove_recording(url)
+
+
 @plugin.route('/clear_all_recordings')
 def clear_all_recordings():
     recordings = plugin.get_storage('recordings')
@@ -687,7 +735,7 @@ def clear_recordings():
         for index in indexes:
             url = recordings_labels[index][0]
             del recordings[url]
-
+    recordings.sync()
 
 @plugin.route('/clear_folders')
 def clear_folders():
@@ -811,7 +859,7 @@ def index():
         'thumbnail':get_icon_path('search'),
         'context_menu': context_items,
     })
-
+    context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Cancel Recordings', 'XBMC.RunPlugin(%s)' % (plugin.url_for(cancel_recordings))))
     context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Clear Recordings', 'XBMC.RunPlugin(%s)' % (plugin.url_for(clear_recordings))))
     context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Clear All Recordings', 'XBMC.RunPlugin(%s)' % (plugin.url_for(clear_all_recordings))))
     items.append(
