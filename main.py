@@ -152,6 +152,7 @@ def rules():
         #log((regex,path))
         context_items = []
         context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Remove Rule', 'XBMC.RunPlugin(%s)' % (plugin.url_for(remove_rule, regex=regex.encode("utf8"),path=path.encode("utf8")))))
+        context_items.append(("[COLOR yellow][B]%s[/B][/COLOR] " % 'Mark All Recorded', 'XBMC.RunPlugin(%s)' % (plugin.url_for('mark_folder',regex=regex.encode("utf8"),path=path.encode("utf8"),label=label.encode("utf8"),depth='1'))))
         if path.startswith('plugin://'):
             addon = re.search('plugin://(.*?)/',path+'/').group(1)
             thumbnail = xbmcaddon.Addon(addon).getAddonInfo('icon')
@@ -160,7 +161,7 @@ def rules():
         items.append({
             "label" : "[{}] {}".format(label,regex),
             #"path" : path,
-            "path" : plugin.url_for('find_folder',regex=regex.encode("utf8"),path=path.encode("utf8"),label=label.encode("utf8"),depth='1'),
+            "path" : plugin.url_for('find_folder',regex=regex.encode("utf8"),path=path.encode("utf8"),label=label.encode("utf8"),depth='1',mark=True),
             "thumbnail" : thumbnail,
             'context_menu': context_items,
         })
@@ -481,9 +482,19 @@ def find_links():
         items += find_folder(regex,path,label,depth=1)
     return items
 
+
 #@plugin.cached(TTL=plugin.get_setting('ttl',int))
 @plugin.route('/find_folder/<regex>/<path>/<label>/<depth>')
 def find_folder(regex,path,label,depth=1):
+    return do_find_folder(regex,path,label,depth)
+
+
+@plugin.route('/mark_folder/<regex>/<path>/<label>/<depth>')
+def mark_folder(regex,path,label,depth=1):
+    return do_find_folder(regex,path,label,depth,mark=True)
+
+
+def do_find_folder(regex,path,label,depth=1,mark=False):
     depth = int(depth)
     #log(("find_folder",regex,path,label,depth))
 
@@ -508,7 +519,7 @@ def find_folder(regex,path,label,depth=1):
             #log(("directory",depth,file_label))
             if depth < plugin.get_setting('depth',int):
                 #log("find_folder")
-                items += find_folder(regex,url,file_label,depth=depth+1)
+                items += do_find_folder(regex,url,file_label,depth=depth+1,mark=mark)
 
         elif f['filetype'] == 'file':
             #log(("found",label))
@@ -516,11 +527,16 @@ def find_folder(regex,path,label,depth=1):
                 continue
             record_label = "[%s] %s" % (label,original_label)
 
+            if mark:
+                recordings[url] = record_label
+
             #log((record_label,recordings.values()))
             if record_label in recordings.values():
                 recorded = True
             else:
                 recorded = False
+
+
 
             #log(("add",label))
             context_items = []
