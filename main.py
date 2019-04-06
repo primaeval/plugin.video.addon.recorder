@@ -247,8 +247,7 @@ def service_folder(regex,path,label,depth=1):
         thumbnail = f['thumbnail']
 
         if f['filetype'] == 'directory':
-            file_label = search_label
-
+            file_label = "%s %s" % (label,search_label)
             if depth < plugin.get_setting('depth',int):
                 service_folder(regex,url,file_label,depth=depth+1)
 
@@ -505,8 +504,7 @@ def find_folder(regex,path,label,depth=1):
         thumbnail = f['thumbnail']
 
         if f['filetype'] == 'directory':
-            #log("here")
-            file_label = search_label
+            file_label = "%s %s" % (label,search_label)
             #log(("directory",depth,file_label))
             if depth < plugin.get_setting('depth',int):
                 #log("find_folder")
