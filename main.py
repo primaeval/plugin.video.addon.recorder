@@ -132,7 +132,9 @@ def add_rule(path,label,name):
     regex = dialog.input('Regex (%s)' % name, regex)
     if regex:
         regexes = plugin.get_storage('regexes')
-        regexes[(regex,path)] = label
+        label = dialog.input('Label (%s)' % label, label)
+        if label:
+            regexes[(regex,path)] = label
 
 
 @plugin.route('/remove_rule/<regex>/<path>')
@@ -221,7 +223,7 @@ def service_thread():
     regexes = plugin.get_storage('regexes')
 
     for (regex,path),label in regexes.iteritems():
-        #log((regex,path))
+        #log((regex,path,label))
         service_folder(regex,path,label,depth=1)
 
     trakt_movies_service()
@@ -389,6 +391,7 @@ def record_thread(url,label):
         count = 60
         url = ""
         while count:
+            #log(count)
             count = count - 1
             time.sleep(1)
             if player.isPlaying():
@@ -400,6 +403,7 @@ def record_thread(url,label):
     if not url:
         return
     #log(("record",url))
+
     if url in recordings:
         log(("already recorded",label,url))
         #return
@@ -429,12 +433,12 @@ def record_thread(url,label):
 
     filename = re.sub(r"[^\w' \[\]-]+", "", label, flags=re.UNICODE)
     recording_path = plugin.get_setting("download") + filename + ' ' + datetime.datetime.now().strftime('%Y-%m-%d %H-%M-%S') +'.ts'
-    log(("filename",recording_path))
+    #log(("filename",recording_path))
 
     seconds = 60*60*plugin.get_setting('recording.hours',int)
     cmd = cmd + ["-reconnect", "1", "-reconnect_at_eof", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "300", "-y", "-t", str(seconds), "-c", "copy"]
     cmd = cmd + ['-f', 'mpegts','-']
-    log(("start",cmd))
+    #log(("start",cmd))
 
     recordings[url] = original_label
     recordings.sync()
@@ -454,10 +458,10 @@ def record_thread(url,label):
     video.close()
     remove_recording(url)
     p.wait()
-    log(("done",cmd))
+    #log(("done",cmd))
     f = xbmcvfs.File(recording_path)
     size = f.size()
-    log(("size",size))
+    #log(("size",size))
     f.close()
     if (size < 1000000) or cancelled:
         del recordings[url]
